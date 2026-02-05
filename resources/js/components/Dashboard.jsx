@@ -1,27 +1,45 @@
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
     const [user, setUser] = useState({});
+    const [schools, setSchools] = useState([]);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchUser = async () => {
+useEffect(() => {
+        const fetchData = async () => {
             try {
                 const token = localStorage.getItem('ACCESS_TOKEN');
-                const response = await axios.get('/api/user', {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-                setUser(response.data);
+
+                if (!token) {
+                    navigate('/login');
+                    return;
+                }
+
+                const config = {
+                    headers: { Authorization: `Bearer ${token}` }
+                };
+
+                const userRes = await axios.get('/api/user', config);
+                setUser(userRes.data);
+                
+                const schoolRes = await axios.get('/api/schools', config);
+                const schoolData = schoolRes.data.schools || schoolRes.data || [];
+                setSchools(schoolData);
+
+                setLoading(false);
             } catch (error) {
-                localStorage.removeItem('ACCESS_TOKEN');
-                navigate('/login');
+                console.error("Gagal ambil data:", error);
+                if (error.response && error.response.status === 401) {
+                    localStorage.removeItem('ACCESS_TOKEN');
+                    navigate('/login');
+                }
+                setLoading(false);
             }
         };
-        fetchUser();
+        fetchData();
     }, []);
 
     const logoutHandler = async () => {
@@ -36,6 +54,8 @@ export default function Dashboard() {
             navigate('/login');
         } catch (error) {
             console.error("Gagal logout", error);
+            localStorage.removeItem('ACCESS_TOKEN');
+            navigate('/login');
         }
     };
 
@@ -69,7 +89,7 @@ export default function Dashboard() {
                     </a>
                 </nav>
 
-                {/* Tombol Logout */}
+                {/* Tombol Logout di Bawah */}
                 <div className="p-4 border-t border-slate-700">
                     <button 
                         onClick={logoutHandler} 
@@ -98,7 +118,7 @@ export default function Dashboard() {
                     <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
                         <div className="flex items-center">
                             <div className="p-3 rounded-full bg-blue-100 text-blue-500 mr-4">
-                                
+                                <img src="assets/images/newspaper.png" className="w-6 h-6" alt="Newspaper Icon"/>
                             </div>
                             <div>
                                 <p className="text-gray-500 text-sm">Total Berita</p>
@@ -132,9 +152,58 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Area Kosong untuk Konten Selanjutnya */}
-                <div className="bg-white rounded-lg shadow p-6 h-64 flex items-center justify-center text-gray-400 border-2 border-dashed border-gray-200">
-                    <p>Area Grafik Statistik</p>
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 className="text-3xl font-bold text-gray-800">Data Sekolah</h2>
+                        <p className="text-gray-500">Daftar sekolah di Kabupaten Pati</p>
+                    </div>
+                    <div className="bg-white px-4 py-2 rounded shadow text-sm font-semibold text-blue-600">
+                        Total: {schools.length} Sekolah
+                    </div>
+                </div>
+
+                {/* TABEL DATA */}
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-100 text-slate-600 uppercase text-xs font-bold">
+                            <tr>
+                                <th className="p-4 border-b">NPSN</th>
+                                <th className="p-4 border-b">Nama Sekolah</th>
+                                <th className="p-4 border-b">Kecamatan</th>
+                                <th className="p-4 border-b text-center">Jenjang</th>
+                                <th className="p-4 border-b text-center">Akreditasi</th>
+                                <th className="p-4 border-b text-center">Total Siswa (2025)</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-sm text-gray-700">
+                            {loading ? (
+                                <tr>
+                                    <td colSpan="6" className="p-8 text-center text-gray-400">Sedang memuat data...</td>
+                                </tr>
+                            ) : schools.length > 0 ? (
+                                schools.map((school) => (
+                                    <tr key={school.id} className="hover:bg-blue-50 transition border-b last:border-0">
+                                        <td className="p-4 font-mono text-slate-500">{school.npsn}</td>
+                                        <td className="p-4 font-bold text-slate-800">{school.name}</td>
+                                        <td className="p-4">{school.district}</td>
+                                        <td className="p-4 text-center">
+                                            <span className={`px-2 py-1 rounded text-xs font-bold ${school.level === 'SD' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                {school.level}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-bold">{school.accreditation}</span>
+                                        </td>
+                                        <td className="p-4 text-center font-bold">{school.student_2025}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="6" className="p-8 text-center text-red-400">Belum ada data sekolah.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </main>
         </div>
