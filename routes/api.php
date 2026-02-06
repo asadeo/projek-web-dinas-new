@@ -12,7 +12,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    Route::get('/schools', [SchoolController::class, 'index']);
+    Route::post('/schools', [SchoolController::class, 'store']);
 });
 
-Route::get('/schools', [SchoolController::class, 'index']);
+
 

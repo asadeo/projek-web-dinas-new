@@ -6,10 +6,22 @@ export default function Dashboard() {
     const [user, setUser] = useState({});
     const [schools, setSchools] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
+    const [showModal, setShowModal] = useState(false);
+    const [newSchool, setNewSchool] = useState({
+        npsn: '',
+        name: '',
+        district: '',
+        address: '',
+        status: 'Negeri',
+        level: 'SD',
+        accreditation: 'belum Terakreditasi',
+        student_2025: 0
+    }); 
 
-useEffect(() => {
-        const fetchData = async () => {
+
+    const fetchData = async () => {
             try {
                 const token = localStorage.getItem('ACCESS_TOKEN');
 
@@ -39,7 +51,8 @@ useEffect(() => {
                 setLoading(false);
             }
         };
-        fetchData();
+        useEffect(() => {
+            fetchData();
     }, []);
 
     const logoutHandler = async () => {
@@ -56,6 +69,40 @@ useEffect(() => {
             console.error("Gagal logout", error);
             localStorage.removeItem('ACCESS_TOKEN');
             navigate('/login');
+        }
+    };
+
+    const handleInputChange = (e) => {
+        setNewSchool({
+            ...newSchool,
+            [e.target.name]: e.target.value
+        });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+
+        try {
+            const token = localStorage.getItem('ACCESS_TOKEN');
+            await axios.post('/api/schools', newSchool, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            alert('Berhasil menambahkan sekolah!');
+            setShowModal(false);
+            setNewSchool({
+                npsn: '', name: '', level: 'SD', status: 'Negeri',
+                district: '', address: '', accreditation: 'belum Terakreditasi', student_2025: 0
+            });
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert('Gagal menyimpan! Cek apakah NPSN sudah ada atau isian belum lengkap.')
+        } finally {
+            isSubmitting(false);
         }
     };
 
@@ -152,13 +199,21 @@ useEffect(() => {
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center mb-6">
-                    <div>
-                        <h2 className="text-3xl font-bold text-gray-800">Data Sekolah</h2>
-                        <p className="text-gray-500">Daftar sekolah di Kabupaten Pati</p>
+                {/* HEADER TABEL */}
+                <div className='mt-8 mb-4'>
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 className="text-3xl font-bold text-gray-800">Data Sekolah</h2>
+                            <p className="text-gray-500">Daftar sekolah di Kabupaten Pati</p>
+                        </div>
+                    <div className='flex items-center gap-4'>
+                        <button onClick={() => setShowModal(true)} className='bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded shadow flex items-center gap-2'>
+                            + Tambah Sekolah
+                        </button>
+                        <div className="bg-white px-4 py-2 rounded shadow text-sm font-semibold text-blue-600">
+                            Total: {schools.length} Sekolah
+                        </div>
                     </div>
-                    <div className="bg-white px-4 py-2 rounded shadow text-sm font-semibold text-blue-600">
-                        Total: {schools.length} Sekolah
                     </div>
                 </div>
 
@@ -205,6 +260,67 @@ useEffect(() => {
                         </tbody>
                     </table>
                 </div>
+                
+                {/* TAMBAH SEKOLAH */}
+                {showModal && (
+                    <div className='fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50'>
+                        <div className='bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 relative'>
+                            <div className='flex justify-between items-center mb-4 border-b pb-2'>
+                                <h3 className='text-xl font-bold text-gray-800'>Tambah Data Sekolah</h3>
+                                <button onClick={() => setShowModal(false)} className='text-gray-500 hover:text-red-500 text-xl font-bold'>&times;</button>
+                            </div>
+                            <form onSubmit={handleSubmit} className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                <div>
+                                    <label className='block text-sm font-medium text-gray-700 mb-1'>NPSN</label>
+                                    <input type="text" name="npsn" value={newSchool.npsn} onChange={handleInputChange} required className='w-full border p-2 rounded focus:ring-2 focus:ring-blue-500' placeholder='Contoh: 20338911'/>
+                                </div>
+                                <div>
+                                    <label className='block text-sm font-medium text-gray-700 mb-1'>Nama Sekolah</label>
+                                    <input type="text" name="name" value={newSchool.name} onChange={handleInputChange} required className='w-full border p-2 rounded focus:ring-2 focus:ring-blue-500' placeholder='Contoh: SD Negeri 1 Pati'/>
+                                </div>
+                                <div>
+                                    <label className='block text-sm font-medium text-gray-700 mb-1'>Jenjang</label>
+                                    <select name="level" value={newSchool.level} onChange={handleInputChange} required className='w-full border p-2 rounded'>
+                                        <option value="SD">SD</option>
+                                        <option value="SMP">SMP</option>    
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className='block text-sm font-medium text-gray-700 mb-1'>Status</label>
+                                    <select name="status" value={newSchool.status} onChange={handleInputChange} required className='w-full border p-2 rounded'>
+                                        <option value="Negeri">Negeri</option>
+                                        <option value="Swasta">Swasta</option>    
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className='block text-sm font-medium text-gray-700 mb-1'>Kecamatan</label>
+                                    <input type="text" name="district" value={newSchool.district} onChange={handleInputChange} required className='w-full border p-2 rounded focus:ring-2 focus:ring-blue-500' placeholder='Contoh: Pati Kota'/>
+                                </div>
+                                <div>
+                                    <label className='block text-sm font-medium text-gray-700 mb-1'>Akreditasi</label>
+                                    <select name="accreditation" value={newSchool.accreditation} onChange={handleInputChange} required className='w-full border p-2 rounded'>
+                                        <option value="A">A</option>
+                                        <option value="B">B</option>    
+                                        <option value="C">C</option>
+                                        <option value="belum Terakreditasi">Belum Terakreditasi</option>
+                                    </select>
+                                </div>
+                                <div className='col-span-1 md:col-span-2'>
+                                    <label className='block text-sm font-medium text-gray-700 mb-1'>Alamat</label>
+                                    <input type="text" name="address" value={newSchool.address} onChange={handleInputChange} required className='w-full border p-2 rounded focus:ring-2 focus:ring-blue-500' placeholder='Contoh: Jl. Raya Pati No. 1'/>
+                                </div>
+                                <div>
+                                    <label className='block text-sm font-medium text-gray-700 mb-1'>Jumlah Siswa (2025)</label>
+                                    <input type="number" name="student_2025" value={newSchool.student_2025} onChange={handleInputChange} required className='w-full border p-2 rounded focus:ring-2 focus:ring-blue-500' placeholder='Contoh: 100'/>
+                                </div>
+                                <div className='col-span-1 md:col-span-2 flex justify-end gap-3 mt-4 pt-4 boder-t'>
+                                    <button type="button" onClick={() => setShowModal(false)} className='bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-6 rounded shadow'>Batal</button>
+                                    <button type="submit" className='bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded shadow'>Simpan</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );
