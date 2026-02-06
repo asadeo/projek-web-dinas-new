@@ -9,6 +9,7 @@ export default function Dashboard() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const [showModal, setShowModal] = useState(false);
+    const [editSchoolId, setEditSchoolId] = useState(null);
     const [newSchool, setNewSchool] = useState({
         npsn: '',
         name: '',
@@ -88,11 +89,21 @@ export default function Dashboard() {
 
         try {
             const token = localStorage.getItem('ACCESS_TOKEN');
-            await axios.post('/api/schools', newSchool, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            alert('Berhasil menambahkan sekolah!');
+
+            if (editSchoolId){
+                await axios.put(`/api/schools/${editSchoolId}`, newSchool, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                alert('Berhasil memperbarui data sekolah!');
+            } else {
+                await axios.post('/api/schools', newSchool, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                alert('Berhasil menambahkan sekolah!');
+            }
+            
             setShowModal(false);
+            setEditSchoolId(null);
             setNewSchool({
                 npsn: '', name: '', level: 'SD', status: 'Negeri',
                 district: '', address: '', accreditation: 'belum Terakreditasi', student_2025: 0
@@ -102,9 +113,39 @@ export default function Dashboard() {
             console.error(error);
             alert('Gagal menyimpan! Cek apakah NPSN sudah ada atau isian belum lengkap.')
         } finally {
-            isSubmitting(false);
+            setIsSubmitting(false);
         }
     };
+
+    const handleEdit = (school) => {
+        setEditSchoolId(school.id);
+        setNewSchool({
+            npsn: school.npsn,
+            name: school.name,
+            district: school.district,
+            address: school.address,
+            status: school.status,
+            level: school.level,
+            accreditation: school.accreditation,
+            student_2025: school.student_2025
+        });
+        setShowModal(true);
+    };
+
+    const handleDelete = async (id, name) => {
+        if (confirm(`Yakin ingin menghapus ${name}?`)) {
+            try {
+                const token = localStorage.getItem('ACCESS_TOKEN');
+                await axios.delete(`/api/schools/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                alert('Data sekolah berhasil dihapus!');
+                fetchData();
+            } catch (error){
+                alert('Gagal menghapus data sekolah!');
+            }
+        }
+    };  
 
     return (
         <div className="flex min-h-screen bg-gray-100">
@@ -207,7 +248,15 @@ export default function Dashboard() {
                             <p className="text-gray-500">Daftar sekolah di Kabupaten Pati</p>
                         </div>
                     <div className='flex items-center gap-4'>
-                        <button onClick={() => setShowModal(true)} className='bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded shadow flex items-center gap-2'>
+                        <button onClick={() =>{
+                            setEditSchoolId(null);
+                            setNewSchool({
+                                npsn: '', name: '', level: 'SD', status: 'Negeri',
+                                district: '', address: '', accreditation: 'belum Terakreditasi', student_2025: 0
+                            });
+                            setShowModal(true);
+                        }}
+                        className='bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded shadow flex items-center gap-2'>
                             + Tambah Sekolah
                         </button>
                         <div className="bg-white px-4 py-2 rounded shadow text-sm font-semibold text-blue-600">
@@ -228,6 +277,7 @@ export default function Dashboard() {
                                 <th className="p-4 border-b text-center">Jenjang</th>
                                 <th className="p-4 border-b text-center">Akreditasi</th>
                                 <th className="p-4 border-b text-center">Total Siswa (2025)</th>
+                                <th className="p-4 border-b text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="text-sm text-gray-700">
@@ -250,6 +300,18 @@ export default function Dashboard() {
                                             <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-bold">{school.accreditation}</span>
                                         </td>
                                         <td className="p-4 text-center font-bold">{school.student_2025}</td>
+                                        <td className='p-4 text-center flex justify-center gap-2'>
+                                            <button 
+                                                onClick={() => handleEdit(school)}
+                                                className='bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm shadow'>
+                                                Edit
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDelete(school.id, school.name)}
+                                                className='bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm shadow'>
+                                                Hapus
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             ) : (

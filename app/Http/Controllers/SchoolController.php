@@ -51,4 +51,65 @@ class SchoolController extends Controller
         ], 201);
     }
 
+    public function update(Request $request, $id){
+        $schools = School::find($id);
+
+        if (!$schools) {
+            return response()->json([
+                'message' => 'Sekolah tidak ditemukan'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'npsn' => 'required|unique:schools,npsn,'.$id,
+            'name' => 'required|string|max:255',
+            'level' => 'required|in:SD,SMP',
+            'status' => 'required|in:Negeri,Swasta',
+            'address' => 'required|string|max:500',
+            'district' => 'required|string|max:255',
+            'student_2025' => 'nullable|integer|min:0',
+            'accreditation' => 'nullable|in:A,B,C,Belum Terakreditasi',
+        ]);
+
+        $schools->update($request->all());
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data sekolah berhasil diupdate!',
+            'school' => $schools
+        ], 200);
+    }
+
+    public function destroy($id){
+        $schools = School::find($id);
+
+        if (!$schools) {
+            return response()->json([
+                'message' => 'Sekolah tidak ditemukan'
+            ], 404);
+        }
+
+        $schools->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data sekolah berhasil dihapus!'
+        ], 200);
+    }
+
+    public function show($id){
+        $schools = School::find($id);
+
+        if (!$schools) {
+            return response()->json([
+                'message' => 'Sekolah tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'school' => $schools
+        ], 200);
+    }
+
 }
